@@ -4,7 +4,7 @@ import CoreGraphics
 enum AppConfig {
     /// How often the hydration reminder fires.
     /// Set to 3600 (60 minutes) for real use. Left at 10s for easy testing.
-    static let hydrationInterval: TimeInterval = 10
+    static let hydrationInterval: TimeInterval = 5
 
     /// Initial window size, used only before the drink GIF has loaded once.
     static let windowSize = CGSize(width: 220, height: 220)
