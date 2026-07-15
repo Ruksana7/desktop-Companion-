@@ -11,7 +11,7 @@ enum AppConfig {
 
     /// The window is resized to the drink GIF's real aspect ratio, capped so
     /// its longer side never exceeds this many points.
-    static let maxPetDimension: CGFloat = 340
+    static let maxPetDimension: CGFloat = 420
 
     /// Margin from the bottom-right corner of the visible screen area.
     static let screenMargin: CGFloat = 24
