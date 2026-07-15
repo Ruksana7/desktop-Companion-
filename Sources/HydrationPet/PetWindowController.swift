@@ -47,6 +47,11 @@ final class PetWindowController: NSWindowController {
         imageView.imageScaling = .scaleProportionallyUpOrDown
         imageView.wantsLayer = true
         imageView.layer?.backgroundColor = NSColor.clear.cgColor
+        // Without this, Core Animation may assume the layer is fully opaque
+        // and skip clearing its backing store between frames, which can show
+        // up as a checkerboard/garbage pattern in transparent regions instead
+        // of true transparency.
+        imageView.layer?.isOpaque = false
         window.contentView = imageView
     }
 

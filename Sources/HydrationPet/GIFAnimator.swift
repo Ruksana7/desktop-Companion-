@@ -53,9 +53,10 @@ final class GIFAnimator {
 
         for i in 0..<count {
             guard let cgImage = CGImageSourceCreateImageAtIndex(source, i, nil) else { continue }
+            let normalized = Self.normalizedAlphaImage(from: cgImage)
             let duration = Self.frameDuration(source: source, index: i)
-            let size = NSSize(width: cgImage.width, height: cgImage.height)
-            loadedFrames.append(Frame(image: NSImage(cgImage: cgImage, size: size), duration: duration))
+            let size = NSSize(width: normalized.width, height: normalized.height)
+            loadedFrames.append(Frame(image: NSImage(cgImage: normalized, size: size), duration: duration))
         }
 
         guard !loadedFrames.isEmpty else { return false }
@@ -125,6 +126,34 @@ final class GIFAnimator {
 
         // Guard against near-zero delays some GIF encoders emit.
         return duration < 0.02 ? fallback : duration
+    }
+
+    /// GIF frames decoded via ImageIO often come back with non-premultiplied
+    /// alpha. Compositing that directly on a layer-backed view can corrupt
+    /// transparent regions (rendering as a checkerboard-like pattern instead
+    /// of clean transparency) because Core Animation's fast path expects
+    /// premultiplied alpha. Redrawing into a fresh premultiplied bitmap
+    /// context normalizes every frame before it ever reaches the layer.
+    private static func normalizedAlphaImage(from cgImage: CGImage) -> CGImage {
+        let width = cgImage.width
+        let height = cgImage.height
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+
+        guard let context = CGContext(
+            data: nil,
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: colorSpace,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else {
+            return cgImage
+        }
+
+        context.clear(CGRect(x: 0, y: 0, width: width, height: height))
+        context.draw(cgImage, in: CGRect(x: 0, y: 0, width: width, height: height))
+        return context.makeImage() ?? cgImage
     }
 
     private static func resourceURL(forGIFNamed name: String) -> URL? {
