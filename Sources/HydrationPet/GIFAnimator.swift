@@ -20,6 +20,13 @@ final class GIFAnimator {
     private var loops = true
     private var completion: (() -> Void)?
 
+    /// The GIF's native pixel size, taken from its first frame. Used to size
+    /// the window to the clip's real aspect ratio instead of stretching it
+    /// into a fixed box.
+    var nativeSize: CGSize? {
+        frames.first?.image.size
+    }
+
     init(imageView: NSImageView) {
         self.imageView = imageView
     }

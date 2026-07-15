@@ -25,23 +25,22 @@ still open and run it from Xcode.
     ├── GIFAnimator.swift          # manual GIF decoder/player (ImageIO-based)
     ├── HydrationTimer.swift       # repeating reminder timer
     ├── StatusBarController.swift  # NSStatusItem menu (the only UI)
-    └── Resources/Assets/          # <-- put your idle.gif and drink.gif here
+    └── Resources/Assets/          # <-- put your drink.gif here
 ```
 
-## 1. Place your assets
+## 1. Place your asset
 
-Drop your two transparent GIFs into:
+Drop your transparent GIF into:
 
 ```
-Sources/HydrationPet/Resources/Assets/idle.gif
 Sources/HydrationPet/Resources/Assets/drink.gif
 ```
 
-- `idle.gif` — character sitting/idling; loops forever.
-- `drink.gif` — character walking into frame and drinking; plays once, then
-  the app automatically switches back to `idle.gif`.
+`drink.gif` — character walking into frame and drinking; plays once, then
+the pet goes blank until the next hydration reminder fires. There is no idle
+GIF/state — by design the pet is invisible between reminders.
 
-Both must have real alpha transparency (not a matte background color) — the
+It must have real alpha transparency (not a matte background color) — the
 window itself has no background, so whatever isn't transparent in the GIF is
 what you'll see floating on the desktop.
 
@@ -127,15 +126,24 @@ Default is `.desktop`. Toggling **Always on Top** in the menu switches
 `window.level` between the two at runtime.
 
 **Animation state machine** (`PetWindowController` + `GIFAnimator`):
-- `startIdle()` loads `idle.gif` and plays it looping.
-- `triggerDrinkAnimation()` loads `drink.gif`, plays it once, and — via a
-  completion closure fired after the final frame — calls `startIdle()`
-  again automatically.
+- There is no idle GIF — `goBlank()` just clears the image view, so the pet
+  is invisible between reminders.
+- `triggerDrinkAnimation()` loads `drink.gif`, resizes the window to match
+  the GIF's real aspect ratio (see below), plays it once, and — via a
+  completion closure fired after the final frame — calls `goBlank()` again
+  automatically.
 - `GIFAnimator` decodes every frame of the GIF up front with `ImageIO`
   (`CGImageSourceCreateImageAtIndex` + per-frame `kCGImagePropertyGIFDictionary`
   delay times) and drives an `NSImageView` frame-by-frame with a `Timer`,
   which is what makes the one-shot "play then callback" behavior possible
   (plain `NSImageView.animates` GIF playback has no completion callback).
+
+**Window sizing** (`PetWindowController.fittedSize` + `resizeAndReposition`):
+The window is resized on every trigger to match `drink.gif`'s real pixel
+aspect ratio (via `GIFAnimator.nativeSize`), scaled so its longer side never
+exceeds `AppConfig.maxPetDimension`. This avoids the GIF being squeezed into
+a fixed box. The window's bottom-right corner stays anchored in place across
+resizes so the pet doesn't jump around the screen.
 
 **Hydration timer** (`HydrationTimer.swift` + `AppConfig.hydrationInterval`):
 Currently set to `10` seconds for easy testing. Change to `3600` for the
@@ -157,7 +165,8 @@ All the knobs live in `AppConfig.swift`:
 
 ```swift
 static let hydrationInterval: TimeInterval = 10   // seconds between reminders
-static let windowSize = CGSize(width: 220, height: 220)
+static let windowSize = CGSize(width: 220, height: 220)  // initial box, before drink.gif loads once
+static let maxPetDimension: CGFloat = 220         // cap on the resized window's longer side
 static let screenMargin: CGFloat = 24             // distance from screen edge
 ```
 
@@ -168,12 +177,13 @@ want a different corner or a fixed custom position.
 ## 5. Testing checklist
 
 - [ ] Launch with `swift run` — droplet icon appears in the menu bar, no
-      Dock icon, no visible window frame.
-- [ ] Character appears bottom-right, idling on loop.
-- [ ] Click desktop icons / other app windows underneath the pet — clicks
-      pass straight through.
-- [ ] Wait ~10s (default test interval) — pet plays the drink animation once,
-      then returns to idle automatically.
+      Dock icon, no visible window frame, nothing visible on the desktop yet
+      (there's no idle state).
+- [ ] Click desktop icons / other app windows where the pet would sit —
+      clicks pass straight through.
+- [ ] Wait ~10s (default test interval) — pet plays the drink animation once
+      at the bottom-right corner, sized to its native aspect ratio, then
+      disappears again.
 - [ ] Menu → **Trigger Drink Now** — plays immediately regardless of timer
       state.
 - [ ] Menu → **Reset Timer** — countdown restarts without playing anything.

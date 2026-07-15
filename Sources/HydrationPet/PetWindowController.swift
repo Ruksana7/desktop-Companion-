@@ -6,6 +6,7 @@ final class PetWindowController: NSWindowController {
     private let imageView = NSImageView()
     private let animator: GIFAnimator
     private(set) var state: PetState = .idle
+    private var hasPositionedOnce = false
 
     init() {
         let window = PetWindow(
@@ -20,7 +21,7 @@ final class PetWindowController: NSWindowController {
         configureWindow()
         configureImageView()
         positionWindow()
-        startIdle()
+        goBlank()
     }
 
     required init?(coder: NSCoder) {
@@ -50,30 +51,68 @@ final class PetWindowController: NSWindowController {
     }
 
     private func positionWindow() {
+        resizeAndReposition(to: AppConfig.windowSize)
+    }
+
+    /// Resizes the window to `size`, keeping its bottom-right corner anchored
+    /// in place so the pet doesn't visually jump when its aspect ratio changes
+    /// between GIFs of different dimensions. On the very first call, anchors
+    /// to the bottom-right of the screen (with margin) instead of the window's
+    /// own prior frame, since it has none yet.
+    private func resizeAndReposition(to size: CGSize) {
         guard let window = window, let screen = NSScreen.main else { return }
-        let screenFrame = screen.visibleFrame
-        let origin = NSPoint(
-            x: screenFrame.maxX - AppConfig.windowSize.width - AppConfig.screenMargin,
-            y: screenFrame.minY + AppConfig.screenMargin
+
+        let anchorMaxX: CGFloat
+        let anchorMinY: CGFloat
+        if hasPositionedOnce {
+            anchorMaxX = window.frame.maxX
+            anchorMinY = window.frame.minY
+        } else {
+            let screenFrame = screen.visibleFrame
+            anchorMaxX = screenFrame.maxX - AppConfig.screenMargin
+            anchorMinY = screenFrame.minY + AppConfig.screenMargin
+            hasPositionedOnce = true
+        }
+
+        let newFrame = NSRect(
+            x: anchorMaxX - size.width,
+            y: anchorMinY,
+            width: size.width,
+            height: size.height
         )
-        window.setFrameOrigin(origin)
+        window.setFrame(newFrame, display: true)
+        imageView.frame = NSRect(origin: .zero, size: size)
+    }
+
+    /// Scales `nativeSize` down so its longer side fits `AppConfig.maxPetDimension`,
+    /// preserving the GIF's real aspect ratio.
+    private func fittedSize(for nativeSize: CGSize) -> CGSize {
+        guard nativeSize.width > 0, nativeSize.height > 0 else { return AppConfig.windowSize }
+        let scale = AppConfig.maxPetDimension / max(nativeSize.width, nativeSize.height)
+        return CGSize(width: nativeSize.width * scale, height: nativeSize.height * scale)
     }
 
     // MARK: - State machine
 
-    func startIdle() {
+    /// Hides the pet entirely — there is no idle animation, only blank space
+    /// between drink triggers.
+    func goBlank() {
         state = .idle
-        guard animator.load(gifNamed: "idle") else { return }
-        animator.play(loop: true)
+        animator.stop()
+        imageView.image = nil
     }
 
     func triggerDrinkAnimation() {
         guard state != .drinking else { return }
         guard animator.load(gifNamed: "drink") else { return }
 
+        if let nativeSize = animator.nativeSize {
+            resizeAndReposition(to: fittedSize(for: nativeSize))
+        }
+
         state = .drinking
         animator.play(loop: false) { [weak self] in
-            self?.startIdle()
+            self?.goBlank()
         }
     }
 

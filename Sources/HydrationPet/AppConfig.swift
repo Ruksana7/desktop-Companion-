@@ -6,8 +6,12 @@ enum AppConfig {
     /// Set to 3600 (60 minutes) for real use. Left at 10s for easy testing.
     static let hydrationInterval: TimeInterval = 10
 
-    /// Size of the pet's window on screen.
+    /// Initial window size, used only before the drink GIF has loaded once.
     static let windowSize = CGSize(width: 220, height: 220)
+
+    /// The window is resized to the drink GIF's real aspect ratio, capped so
+    /// its longer side never exceeds this many points.
+    static let maxPetDimension: CGFloat = 220
 
     /// Margin from the bottom-right corner of the visible screen area.
     static let screenMargin: CGFloat = 24

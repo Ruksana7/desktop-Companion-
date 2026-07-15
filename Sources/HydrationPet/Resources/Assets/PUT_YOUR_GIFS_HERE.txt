@@ -1,17 +1,19 @@
-Place your two transparent-background GIF assets in this folder:
+Place your transparent-background drink animation GIF in this folder:
 
-  idle.gif   - the character sitting/idling, loops forever
-  drink.gif  - the character walking in and drinking, plays once then
-               the app automatically switches back to idle.gif
+  drink.gif  - the character walking in and drinking; plays once, then
+               the pet goes blank until the next hydration reminder fires.
+
+There is no idle GIF/state — the pet is invisible between reminders by
+design.
 
 Notes:
-- Both GIFs should use transparency (not a solid background color) so the
+- The GIF should use transparency (not a solid background color) so the
   window shows only the character over the desktop.
-- Frame size doesn't need to match AppConfig.windowSize exactly —
-  imageScaling is set to scaleProportionallyUpOrDown — but matching the
-  GIF's aspect ratio to the 220x220 default window avoids letterboxing.
-- After adding/replacing GIFs you must rebuild (swift build / swift run)
+- The window automatically resizes to match drink.gif's real aspect
+  ratio (capped to AppConfig.maxPetDimension), so it no longer needs to
+  match a fixed square box.
+- After adding/replacing the GIF you must rebuild (swift build / swift run)
   since SwiftPM copies resources into the build output at build time.
 
-Delete this file once your real assets are in place (it is harmless to
-leave it — it just gets copied alongside the GIFs).
+Delete this file once your real asset is in place (harmless to leave it —
+it just gets copied alongside the GIF).
