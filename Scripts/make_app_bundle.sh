@@ -19,12 +19,21 @@ mkdir -p "$CONTENTS/MacOS" "$CONTENTS/Resources"
 
 cp "$BIN_PATH" "$CONTENTS/MacOS/$APP_NAME"
 
-# Copy the SwiftPM-generated resource bundle (contains idle.gif / drink.gif).
-RESOURCE_BUNDLE=$(find ".build/$BUILD_CONFIG" -maxdepth 1 -name "*.bundle" | head -n 1)
+# Copy the SwiftPM-generated resource bundle (contains drink.gif).
+# Search the whole .build tree, not just one level under .build/<config> —
+# newer toolchains sometimes nest build products under a per-architecture
+# triple directory (e.g. .build/arm64-apple-macosx/release/) instead.
+RESOURCE_BUNDLE=$(find ".build" -name "*.bundle" -path "*$BUILD_CONFIG*" | head -n 1)
+if [ -z "$RESOURCE_BUNDLE" ]; then
+  RESOURCE_BUNDLE=$(find ".build" -name "*.bundle" | head -n 1)
+fi
+
 if [ -n "$RESOURCE_BUNDLE" ]; then
   cp -R "$RESOURCE_BUNDLE" "$CONTENTS/Resources/"
+  echo "Copied resource bundle: $RESOURCE_BUNDLE"
 else
-  echo "⚠️  No resource bundle found in .build/$BUILD_CONFIG — did you add idle.gif/drink.gif?"
+  echo "⚠️  No resource bundle found anywhere under .build — did you add drink.gif to"
+  echo "   Sources/HydrationPet/Resources/Assets/ and run 'swift build' at least once?"
 fi
 
 cat > "$CONTENTS/Info.plist" <<PLIST
