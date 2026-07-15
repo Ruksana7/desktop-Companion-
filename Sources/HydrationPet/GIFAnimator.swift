@@ -121,7 +121,10 @@ final class GIFAnimator {
     }
 
     private static func resourceURL(forGIFNamed name: String) -> URL? {
-        Bundle.module.url(forResource: name, withExtension: "gif", subdirectory: "Resources/Assets")
+        // SwiftPM's directory .copy() resource keeps only the last path
+        // component ("Assets"), not the full "Resources/Assets" source path.
+        Bundle.module.url(forResource: name, withExtension: "gif", subdirectory: "Assets")
+            ?? Bundle.module.url(forResource: name, withExtension: "gif", subdirectory: "Resources/Assets")
             ?? Bundle.module.url(forResource: name, withExtension: "gif")
     }
 }
